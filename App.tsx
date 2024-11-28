@@ -1,118 +1,118 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useState } from 'react';
 import {
   SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  useColorScheme,
-  View,
+  Alert,
+  ActivityIndicator,
+  Button,
+  Share,
+  View
 } from 'react-native';
+import ImagePickerScreen from './android/app/components/ImagePickerScreen';
+import VideoProcessingUtils from './android/app/components/VideoProcessingUtils';
+import Video from 'react-native-video';
+import { ImagePath } from './android/app/components/types';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+type ImageSelectionHandler = (images: string[]) => void;
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
+interface VideoProcessingOptions {
+  zoomEffect?: boolean;
+  fadeEffect?: boolean;
 }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+const App: React.FC = () => {
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [processingVideo, setProcessingVideo] = useState<boolean>(false);
+  const [finalVideoUri, setFinalVideoUri] = useState<string | null>(null);
+
+  const handleImagesSelected = (images: string[]) => {
+    setSelectedImages(images);
+  };
+
+  const createVideoSequence = async () => {
+    if (selectedImages.length < 2) {
+      Alert.alert('Select at least 2 images');
+      return;
+    }
+
+    setProcessingVideo(true);
+    try {
+      const imagePathArray: ImagePath[] = selectedImages.map(uri => ({ uri }));
+
+      const videoPath = await VideoProcessingUtils.createVideoFromImages(imagePathArray, {
+        scale: { width: 1280, height: 720 },
+        zoomEffect: true,
+        fadeEffect: true,
+        frameDuration: 3
+      });
+
+      // Note: You'll need to replace this with an actual music file in your project
+      const musicPath = require('./assets/background_music.mp3');
+
+      const finalVideo = await VideoProcessingUtils.addBackgroundMusic(
+        videoPath,
+        musicPath,
+        { volume: 0.3 }
+      );
+
+      setFinalVideoUri(finalVideo);
+      Alert.alert('Success', 'Video created successfully!');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create video');
+    } finally {
+      setProcessingVideo(false);
+    }
+  };
+
+  const shareVideo = async () => {
+    if (!finalVideoUri) return;
+
+    try {
+      await Share.share({
+        title: 'Check out my photo sequence video!',
+        url: finalVideoUri,
+      });
+    } catch (error: any) {
+      Alert.alert('Sharing failed', error.message);
+    }
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+    <SafeAreaView style={styles.container}>
+      <ImagePickerScreen onImagesSelected={handleImagesSelected} />
+
+      {selectedImages.length > 1 && (
+        <Button title="Create Video" onPress={createVideoSequence} />
+      )}
+
+      {processingVideo && <ActivityIndicator size="large" />}
+
+      {finalVideoUri && (
+        <>
+          <Video
+            source={{ uri: finalVideoUri }}
+            style={styles.video}
+            controls={true}
+            resizeMode="contain"
+          />
+          <Button title="Share Video" onPress={shareVideo} />
+        </>
+      )}
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    padding: 10,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
+  video: {
+    width: '100%',
+    height: 300,
+    marginTop: 20,
+  }
 });
 
 export default App;
