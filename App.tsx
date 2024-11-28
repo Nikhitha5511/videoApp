@@ -46,8 +46,6 @@ const App: React.FC = () => {
         fadeEffect: true,
         frameDuration: 3
       });
-
-      // Note: You'll need to replace this with an actual music file in your project
       const musicPath = require('./assets/background_music.mp3');
 
       const finalVideo = await VideoProcessingUtils.addBackgroundMusic(

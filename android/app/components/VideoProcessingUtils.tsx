@@ -4,7 +4,6 @@ import { FFmpegKit, ReturnCode as FFmpegReturnCode } from 'ffmpeg-kit-react-nati
 import { Platform } from 'react-native';
 import FastImage from 'react-native-fast-image';
 
-// Types
 interface ImagePath {
   uri: string;
 }
@@ -19,7 +18,6 @@ interface ImageProcessingOptions {
 const VideoProcessingUtils = {
   async getImageDimensions(imagePath: string): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
-      // Cast to 'any' to bypass TypeScript strict checks
       (FastImage as any).getSize(
         imagePath, 
         (width: number, height: number) => resolve({ width, height }),
@@ -33,37 +31,31 @@ const VideoProcessingUtils = {
     options: ImageProcessingOptions = {}
   ): Promise<string> {
     try {
-      // Use non-null assertion to guarantee string
       const outputPath = Platform.select({
         android: `${RNFS.ExternalDirectoryPath}/photo_sequence.mp4`,
         ios: `${RNFS.DocumentDirectoryPath}/photo_sequence.mp4`
       })!;
 
-      // Use non-null assertion to guarantee string
       const imageListPath = Platform.select({
         android: `${RNFS.ExternalDirectoryPath}/image_list.txt`,
         ios: `${RNFS.DocumentDirectoryPath}/image_list.txt`
       })!;
 
-      // Write image list file
       await RNFS.writeFile(
         imageListPath, 
         imagePaths.map(path => `file '${path.uri}'`).join('\n')
       );
 
-      // Determine image dimensions and scale
       const firstImageDimensions = await this.getImageDimensions(imagePaths[0].uri);
       const scale = options.scale || {
         width: 1280,
         height: Math.round((1280 / firstImageDimensions.width) * firstImageDimensions.height)
       };
 
-      // Default options
       const frameDuration = options.frameDuration || 3;
       const zoomEffect = options.zoomEffect !== false;
       const fadeEffect = options.fadeEffect !== false;
 
-      // Construct FFmpeg command
       const ffmpegCommand = [
         '-f', 'concat',
         '-safe', '0',
@@ -82,15 +74,12 @@ const VideoProcessingUtils = {
         outputPath
       ];
 
-      // Execute FFmpeg command
       const session = await FFmpegKit.execute(ffmpegCommand.join(' '));
       const returnCode = await session.getReturnCode();
 
-      // Check logs for debugging
       const logs = await session.getLogs();
       console.log('FFmpeg Logs:', logs);
 
-      // Use the static method from ReturnCode
       if (FFmpegReturnCode.isValueSuccess(returnCode)) {
         return outputPath;
       } else {
@@ -110,7 +99,6 @@ const VideoProcessingUtils = {
     options: { volume?: number } = {}
   ): Promise<string> {
     try {
-      // Use non-null assertion to guarantee string
       const outputPath = Platform.select({
         android: `${RNFS.ExternalDirectoryPath}/final_video.mp4`,
         ios: `${RNFS.DocumentDirectoryPath}/final_video.mp4`
@@ -132,7 +120,6 @@ const VideoProcessingUtils = {
       const session = await FFmpegKit.execute(ffmpegCommand.join(' '));
       const returnCode = await session.getReturnCode();
 
-      // Use the static method from ReturnCode
       if (FFmpegReturnCode.isValueSuccess(returnCode)) {
         return outputPath;
       } else {
